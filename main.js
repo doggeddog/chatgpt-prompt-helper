@@ -1,16 +1,17 @@
 // ==UserScript==
 // @name         ChatGPT-Prompt-Helper
-// @namespace    https://github.com/TBXark/chatgpt-prompts-helper
-// @author       TBXark
-// @homepageURL  https://github.com/TBXark/chatgpt-prompts-helper
+// @namespace    https://github.com/doggeddog/chatgpt-prompts-helper
+// @author       doggeddog
+// @homepageURL  https://github.com/doggeddog/chatgpt-prompts-helper
 // @version      1.1.1
 // @description  Show prompts for ChatGPT
 // @match        https://chat.openai.com/*
 // @match        https://bard.google.com/*
 // @match        https://poe.com/*
+// @match        https://waaao.com/*
 // @connect      raw.githubusercontent.com
-// @downloadURL  https://raw.githubusercontent.com/TBXark/chatgpt-prompt-helper/master/main.js
-// @updateURL    https://raw.githubusercontent.com/TBXark/chatgpt-prompt-helper/master/main.js
+// @downloadURL  https://raw.githubusercontent.com/doggeddog/chatgpt-prompt-helper/master/main.js
+// @updateURL    https://raw.githubusercontent.com/doggeddog/chatgpt-prompt-helper/master/main.js
 // @grant        GM_addStyle
 // ==/UserScript==
 
@@ -19,7 +20,7 @@
 (() => {
   // 这里可以替换成自己的模板,格式为 [{"act": "", "prompt": ""}]
   const templateURL =
-    "https://raw.githubusercontent.com/TBXark/chatgpt-prompt-helper/master/templates/favorite.json";
+    "https://raw.githubusercontent.com/doggeddog/chatgpt-prompt-helper/master/templates/favorite.json";
 
   const button = document.createElement("div");
   button.classList.add("chatgpt-prompt-helper-button");
@@ -69,7 +70,7 @@
     segmentFilter.appendChild(segmentItem);
     segmentItem.addEventListener("click", () => {
       loadTemplates(
-        `https://raw.githubusercontent.com/TBXark/chatgpt-prompt-helper/master/templates/${segmentData[i]}.json`
+        `https://raw.githubusercontent.com/doggeddog/chatgpt-prompt-helper/master/templates/${segmentData[i]}.json`
       );
       const segmentItems = document.getElementsByClassName(
         "chatgpt-prompt-helper-segment-filter-item"
@@ -209,6 +210,59 @@
     isDragging = false;
   });
 
+
+  /**
+   *  Fetch
+   */
+
+  async function fetchWithCache(url, cacheKey, cacheTime) {
+    cacheKey = cacheKey || url;
+    if (window.localStorage) {
+      let cachedData = localStorage.getItem(cacheKey);
+      const cachedTime = localStorage.getItem(cacheKey + "_expires");
+      if (cachedTime && Date.now() > cachedTime) {
+        localStorage.removeItem(cacheKey);
+        localStorage.removeItem(cacheKey + "_expires");
+        cachedData = null;
+      }
+      if (cachedData) {
+        return Promise.resolve(JSON.parse(cachedData));
+      }
+    }
+
+    return fetch(url)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (window.localStorage) {
+          localStorage.setItem(cacheKey, JSON.stringify(data));
+          if (cacheTime) {
+            localStorage.setItem(cacheKey + "_expires", Date.now() + cacheTime);
+          }
+        }
+        return data;
+      });
+  }
+
+  function loadTemplates(url) {
+    fetchWithCache(url, null, 60 * 60 * 24).then((data) => {
+      // list remove all children except segment filter
+      while (list.children.length > 1) {
+        list.removeChild(list.lastChild);
+      }
+      data.forEach((item) => {
+        const listItem = createListItem(item.act, item.sub, item.prompt);
+        list.appendChild(listItem);
+      });
+    });
+  }
+
+  loadTemplates(templateURL);
+
   /**
    *  Style
    */
@@ -242,7 +296,7 @@
         display: flex;
         justify-content: flex-start;
         align-items: center;
-        z-index: 9999;        
+        z-index: 9999;
     }
 
     .chatgpt-prompt-helper-segment-filter::-webkit-scrollbar {
@@ -262,7 +316,7 @@
     .chatgpt-prompt-helper-segment-filter-item-active {
         background-color: #FFB6B6;
     }
-    
+
     .chatgpt-prompt-helper-list {
         position: fixed;
         width: 300px;
@@ -275,7 +329,7 @@
         border-radius: 10px;
         padding: 10px;
     }
-    
+
     .chatgpt-prompt-helper-list::-webkit-scrollbar-thumb {
         background-color: #ccc;
         border-radius: 6px;
@@ -343,55 +397,4 @@
     }
   }
 
-  /**
-   *  Fetch
-   */
-
-  async function fetchWithCache(url, cacheKey, cacheTime) {
-    cacheKey = cacheKey || url;
-    if (window.localStorage) {
-      let cachedData = localStorage.getItem(cacheKey);
-      const cachedTime = localStorage.getItem(cacheKey + "_expires");
-      if (cachedTime && Date.now() > cachedTime) {
-        localStorage.removeItem(cacheKey);
-        localStorage.removeItem(cacheKey + "_expires");
-        cachedData = null;
-      }
-      if (cachedData) {
-        return Promise.resolve(JSON.parse(cachedData));
-      }
-    }
-
-    return fetch(url)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (window.localStorage) {
-          localStorage.setItem(cacheKey, JSON.stringify(data));
-          if (cacheTime) {
-            localStorage.setItem(cacheKey + "_expires", Date.now() + cacheTime);
-          }
-        }
-        return data;
-      });
-  }
-
-  function loadTemplates(url) {
-    fetchWithCache(url, null, 60 * 60 * 24).then((data) => {
-      // list remove all children except segment filter
-      while (list.children.length > 1) {
-        list.removeChild(list.lastChild);
-      }
-      data.forEach((item) => {
-        const listItem = createListItem(item.act, item.sub, item.prompt);
-        list.appendChild(listItem);
-      });
-    });
-  }
-
-  loadTemplates(templateURL);
 })();
