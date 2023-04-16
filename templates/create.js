@@ -1913,11 +1913,11 @@ function build(descKey) {
       .flatMap((prompt) => {
         return [{
           title: `${prompt.title}[en]`,
-          mark: prompt.remark,
+          mark: `${prompt.remark}[en]`,
           prompt: prompt["description"],
-        }, 
+        },
         {
-          title:  `${prompt.title}[zh]`,
+          title: prompt.title,
           mark: prompt.remark,
           prompt: prompt["descn"],
         }
